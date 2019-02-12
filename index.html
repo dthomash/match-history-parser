@@ -1,1 +1,151 @@
-<h1>Hello World!</h1>
+<html>
+    <head>
+        <script type="text/javascript" src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+        <script type="text/javascript">
+            var knownTeamAbbreviations = {
+                'azio esports': 'AZIO',
+                'bloody gaming': 'BDY',
+                'polar ace': 'POLAR',
+                'maryville university': 'MU',
+                'lowkey esports': 'LKEY',
+                'skizm esports': 'SZM',
+                'buff katarina': 'Buff Katarina',
+                'team clarity': 'CLR',
+                'fruition esports': 'FRE',
+                'zenith esports': 'ZEN',
+                'team brickz': 'BKZ',
+                'university of california, irvine': 'UCI',
+                'team eradication': 'ERA',
+                'buggle gang 19': 'BG19',
+                'f3 visuals': 'F3',
+                'michigan state university': 'MSU',
+                'super nova': 'SN',
+                'university of texas at dallas': 'UTD'
+            }
+
+            $(() => {
+
+                function getWinner(row) {
+                    return $(row).css('background-color') == 'rgb(155, 214, 255)' ? 'blue' : 'red'
+                }
+
+                function getTeam(teamATag) {
+                    var aTag = $(teamATag).find('a');
+                    var fullName = aTag.attr('title');
+                    return {
+                        fullName: fullName,
+                        abbreviation: knownTeamAbbreviations[fullName.toLocaleLowerCase()]
+                    }
+                }
+
+                $('#merge').click(() => {
+                    // Parse match history
+                    var matchHistoryDoc = $($('#matchHistoryHtml').val());
+                    console.log(matchHistoryDoc);
+
+                    var matchHistoryTable = matchHistoryDoc.find('.wikitable');
+                    console.log(matchHistoryTable);
+
+                    var dataRows = matchHistoryTable.find('tbody').find('tr');
+                    var matchHistory = []
+                    dataRows.each((i, row) => {
+                        var columns = $(row).find('td');
+                        if (columns.length > 0) {
+                            var match = {
+                                number: $(columns.get(0)).text().trim(),
+                                date: $(columns.get(1)).text().trim(),
+                                blueTeam: getTeam(columns.get(3)),
+                                redTeam: getTeam(columns.get(4)),
+                                matchHistory: $($(columns.get(25)).html()).find('a').attr('href'),
+                                winner: getWinner(row)
+                            };
+                            matchHistory.push(match);
+                        }
+                    });
+
+                    // Update Wikitext
+                    var wikitext = $('#currentWikiText').val();
+                    var matchScheduleRegExp = /{{MatchSchedule[^\/](.|[\r\n])*?({{MatchSchedule\/Game(.|[\r\n])*?}})*?(.|[\r\n])*?}}(.|[\r\n])(?={{)/gm;
+                    var matchScheduleGameRegExp = /\|game(\d)={{MatchSchedule\/Game(.|[\r\n])*?}}/g;
+                    var matchTeam1RegExp = /\|team1=(.*?)(?=\s*?[\|}])/;
+                    var matchTeam2RegExp = /\|team2=(.*?)(?=\s*?[\|}])/;
+
+                    window.matchSchedules = wikitext.match(matchScheduleRegExp);
+                    console.log(matchSchedules);
+
+                    matchSchedules.forEach((matchSchedule) => {
+                        console.log(matchSchedule);
+                        var games = matchSchedule.match(matchScheduleGameRegExp);
+                        var team1 = matchSchedule.match(matchTeam1RegExp)[1];
+                        var team2 = matchSchedule.match(matchTeam2RegExp)[1];
+                        console.log(games);
+                        console.log(team1);
+                        console.log(team2);
+                        var matchHistoryGames = matchHistory.filter((match) => {
+                            return match.blueTeam.abbreviation == team1 && match.redTeam.abbreviation == team2
+                                || match.blueTeam.abbreviation == team2 && match.redTeam.abbreviation == team1;
+                        });
+                        console.log(matchHistoryGames);
+
+                        matchHistoryGames.forEach((game, index) => {
+                            if (games != null && games[index] != null) {
+                                // TODO: merge game records
+                            } else {
+                                var gameWikiText = `|game${index+1}={{MatchSchedule/Game\n|blue=${game.blueTeam.abbreviation}|red=${game.redTeam.abbreviation}|winner=${game.winner == 'blue' ? 1 : 2}|ssel=|ff=\n|mh=${game.matchHistory}\n|recap=\n|vodpb=\n|vodstart=\n|vodpost=\n|vodhl=\n|vodinterview=\n|with= |withlinks=\n|mvp= |mvplink=\n}}`;
+                                console.log(gameWikiText);
+                                var matchSchedulePosition = wikitext.indexOf(matchSchedule);
+                                var gameInsertPosition = matchSchedulePosition + matchSchedule.length - 3;
+                                wikitext = wikitext.slice(0, gameInsertPosition) + gameWikiText + wikitext.slice(gameInsertPosition);
+                                matchSchedule = matchSchedule.slice(0, matchSchedule.length - 3) + gameWikiText + matchSchedule.slice(matchSchedule.length -3);
+                            }
+
+                        });                      
+                    });
+
+                    $('#newWikiText').val(wikitext);
+
+                    // var dataPageDoc = $($('#currentDataPageHtml').val());
+                    // var dataTables = dataPageDoc.find('.wikitable');
+                    // var parsedDataTables = [];
+                    // dataTables.each((i, dataTable) => {
+                    //     dataTable = $(dataTable);
+
+                    //     var matches = [];
+
+
+                    //     parsedDataTables.push({
+                    //         name: $(dataTable.find('th[colspan]').get(0)).text(),
+                    //         matches: matches
+                    //     })
+                    // });
+
+                    // console.log(parsedDataTables);
+
+                    alert('done');
+                });
+
+                $('#copy').click((e) => {
+                    $(e.srcElement).select();
+                    document.execCommand('copy');
+                });
+            });
+        </script>
+        
+        <style>
+        </style>
+    </head>
+    <body>
+        <h1>dthomash's Match History Parser</h1>
+        <h2>Current Data Page Wikitext</h2>
+        <textarea id="currentWikiText"></textarea>
+        <!-- <h2>Current Data Page Html</h2>
+        <textarea id="currentDataPageHtml"></textarea> -->
+        <h2>Match History Html</h2>
+        <textarea id="matchHistoryHtml"></textarea>
+        <h2>New Data Page WikiText</h2>
+        <textarea id="newWikiText"></textarea>
+        <button id="merge">Merge Match History to Data Table</button>
+        <button id="copy">Copy to clipboard</button>
+    </body>
+</html>
+
