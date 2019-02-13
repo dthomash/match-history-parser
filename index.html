@@ -63,6 +63,8 @@
                         }
                     });
 
+                    matchHistory = matchHistory.reverse();
+
                     // Update Wikitext
                     var wikitext = $('#currentWikiText').val();
                     var matchScheduleRegExp = /{{MatchSchedule[^\/](.|[\r\n])*?({{MatchSchedule\/Game(.|[\r\n])*?}})*?(.|[\r\n])*?}}(.|[\r\n])(?={{)/gm;
